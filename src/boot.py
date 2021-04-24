@@ -1,67 +1,35 @@
-def joinAP(SSID, PWD):
-    import network
-    wlan = network.WLAN(network.STA_IF)
-    if not wlan.isconnected():
-        print('connecting to network...')
-        wlan.active(True)
-        wlan.connect(SSID, PWD)
-        while not wlan.isconnected():
-            pass
-    print('network config:', wlan.ifconfig())
-#
-def exitAP():
+from cfg import cfg
+
+# connect wifi
+try :
 	import network
 	wlan = network.WLAN(network.STA_IF)
-	wlan.active(False)
-# 
-def startAP(SSID, PWD):
-	import network
-	ap = network.WLAN(network.AP_IF)
-	ap.active(True)
-	ap.config(essid=SSID, password=PWD)
-#
-def stopAP():
-	import network
-	ap = network.WLAN(network.AP_IF)
-	ap.active(False)
-#
+	if not wlan.isconnected():
+		print('connecting to network...')
+		wlan.active(True)
+		wlan.connect( cfg['wifiName'], cfg['wifiPass'] )
+		while not wlan.isconnected():
+			pass
+	print('network config:', wlan.ifconfig())
+except :
+	print("wifi connection failed")
 
-joinAP('WiFi AP', 'WiFi Password')
-
+# get time
 try :
 	import ntptime
-	ntptime.host = "1.europe.pool.ntp.org"
+	ntptime.host = cfg['ntpServer']
 	ntptime.settime()
 except:
 	print("ntp update failed")
 
-# make an array of available pins
+# NodeMCU label to ESP8266 pin number:
+# l2p = {"D0":16,"D1":5,"D2":4,"D3":0,"D4":2,"D5":14,"D6":12,"D7":13,"D8":15,"D9":3,"D10":1}
+
+# make sure that all pins are really low
+# don't touch WAKE pin due to weird results (it might reset)
 from machine import Pin
-def getPins(pins) :
-	res = []
-	for p in pins :
-		res.append( Pin(p, Pin.OUT) )
-	return res
-#
-# NodeMCU label to ESP8266 pin number
-gpioL2P = {
-	# "D0":16 # don't touch WAKE pin
-	"D1":5
-	,"D2":4
-	,"D3":0
-	,"D4":2
-	,"D5":14
-	,"D6":12
-	,"D7":13
-	,"D8":15
-	,"D9":3
-	,"D10":1
-}
-gpioPins = getPins( list( gpioL2P.values() ) )
-for p in gpioPins :
-	p.off()
-#
-# my sensor pins are D5:14,D6:12,D7:13
+pins = [Pin(i, Pin.OUT) for i in [5,4,0,2,14,12,13,15,3,1]] 
+offs = [p.off() for p in pins]
 
 import webrepl
 webrepl.start()

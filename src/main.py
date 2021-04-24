@@ -1,3 +1,4 @@
+from cfg import cfg
 from umqttsimple import MQTTClient
 import ubinascii
 import machine
@@ -7,18 +8,17 @@ import utime
 import time
 
 delayPerIteration = 3
-deepSleepMinDefault = 10
-deepSleepMin = deepSleepMinDefault
+deepSleepMinutes = cfg['defaultSleepMinutes']
 
-clientID = b"esp8266_" + ubinascii.hexlify(machine.unique_id())
-client = MQTTClient(clientID, "192.168.0.xxxx", user="mqtt", password="xxxx", port=1883)
+clientID = b"esp8266_" + ubinascii.hexlify( machine.unique_id() )
+client = MQTTClient(clientID, cfg['mqttServer'], user=cfg['mqttUser'], password=cfg['mqttPass'], port=cfg['mqttPort'])
 
 # create ADC object on ADC pin
 adc = ADC(0)
 
-# D5:14,D6:12,D7:13
+# D5:14,D6:12,D7:13 
 # A=12, B=14, C=13 # because I messed when soldering
-pins = [ Pin(12, Pin.OUT), Pin(14, Pin.OUT), Pin(13, Pin.OUT) ]
+pins = [Pin(i, Pin.OUT) for i in cfg['sensorPins']]
 
 # 
 def readSensors() :
@@ -31,53 +31,54 @@ def readSensors() :
 		p.off()
 	valueOff = str( adc.read() )
 	print("	sensor off value: " + valueOff)
-	client.publish("groot/valueOff", valueOff )
+	client.publish(cfg['mqttPath'] + "/valueOff", valueOff )
 	for i in range(0, len(pins)) :
 		p = pins[i]
 		p.on()
 		v = adc.read()
 		print("	sensor " + str(i+1) + " value: " + str( v ) )
-		client.publish("groot/moisture" + chr(65+i), str( v ))
+		client.publish(cfg['mqttPath'] + "/moisture" + chr(65+i), str( v ))
 		res.append(v)
 		p.off()
-	client.publish("groot/lastUpdate", stmp)
+	client.publish(cfg['mqttPath'] + "/lastUpdate", stmp)
 	return res
 #
+
 def onMessage(topic, msg) :
-	global deepSleepMin
+	global deepSleepMinutes
 	print("Topic: %s, Message: %s" % (topic, msg))
 	try :
-		deepSleepMin = int(msg)
-		print("deepSleepMinutes from MQTT = " + str(deepSleepMin) )
+		deepSleepMinutes = int(msg)
+		print("deepSleepMinutes from MQTT = " + str(deepSleepMinutes) )
 	except :
 		print("failed to convert MQTT message to float: " + str(msg))
 #
 
-client.connect()
-client.set_callback(onMessage)
-client.subscribe(b"groot/deepSleepMinutes")
-client.check_msg()
+try :
+	client.connect()
+	client.set_callback(onMessage)
+	client.subscribe(bytes(cfg['mqttPath'] + "/deepSleepMinutes","ascii"))
+	# we make 3 iterations to read sensors and publish results
+	for i in range(1, 4) :
+		# read mqqt input
+		client.check_msg()
+		print("------------------------------------------------------------")
+		print("iteration {:g}".format(i))
+		readSensors()
+		time.sleep(delayPerIteration)
+		print("------------------------------------------------------------")
+	# set default value for deep sleep delay
+	if deepSleepMinutes < 1 :
+		client.publish(cfg['mqttPath'] + "/deepSleepMinutes", str(cfg['defaultSleepMinutes']) )
+	client.disconnect()
+except Exception as e: 
+	print(e)
 
-for i in range(1, 4) :
-	print("------------------------------------------------------------")
-	print("iteration {:g}".format(i))
-	readSensors()
-	time.sleep(delayPerIteration)
-	print("------------------------------------------------------------")
-#
+deepSleepMS= deepSleepMinutes * 60 * 1000
 
-client.check_msg()
-client.disconnect()
-
-deepSleepMS= deepSleepMin * 60 * 1000
-
-if deepSleepMin > 0 :
-	print("going to deep sleep for {:g} minutes.".format(deepSleepMin))
+# deep sleep on 
+if deepSleepMinutes > 0 :
+	print("going to deep sleep for {:g} minutes.".format(deepSleepMinutes))
 	time.sleep(1)
 	machine.deepsleep( deepSleepMS )
-else :
-	print("deep sleep off. Please set MQTT/groot/deepSleepMin > 0 and restart manually.")
-	client.connect()
-	client.publish("groot/deepSleepMinutes", str(deepSleepMinDefault) )
-	client.disconnect()
 #
