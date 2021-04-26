@@ -35,6 +35,13 @@ They report values muxed via diodes to the ADC pin.
   - disconnect from MQTT server
   - fall into deep sleep in case the deep sleep time is more than 0
     -  otherwise we just stay on for WEBREPL
+- cfg.py
+  - configure all your inputs here
+    - wifi connection details
+    - NTP server
+    - default sleep time
+    - MQTT server details
+    - sensor pins  
 
 ## Hardware
 ESP8266, resistive moisture sensors, diodes, resistor, wires, connectors
