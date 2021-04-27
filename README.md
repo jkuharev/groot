@@ -3,16 +3,9 @@ Groot is a plant. Plants need water.
 In this project, I have implemented an IOT hard- and software solution that allows me to monitor soil moisture on multiple plants.
 
 ## Logics
-### Short version
 A series of resistive soil moisture sensors report values to ESP8266. ESP reports to a MQTT server periodically.
 
-### Long version
-**Wiring**: 
-Series of resistive moisture sensors connected to the common ground of ESP but get powered on-demand by different ESP pins.
-They report values muxed via diodes to the ADC pin.
-
-**Soft-Logics**:
-
+**Stepwise Logics**:
 - boot.py
   - connect to an existing Wifi-AP
   - get current time from NTP
@@ -44,13 +37,16 @@ They report values muxed via diodes to the ADC pin.
     - sensor pins  
 
 ## Hardware
-ESP8266, resistive moisture sensors, diodes, resistor, wires, connectors
+ESP8266, resistive moisture sensors, diodes, resistor, wires, connectors, reset button
+
+## Wiring 
+Series of resistive moisture sensors connected to the common ground of ESP but get powered on-demand by different ESP pins.
+They report values muxed via diodes to the ADC pin.
 
 ## Software
 Micropython, Wifi connection, multimuxed ADC sensor read, MQTT
 
 ## References
-
 - Micropython Firmware: [https://micropython.org/download/esp8266/]
 - MQTT Client: [https://github.com/micropython/micropython-lib/tree/master/umqtt.simple]
 
